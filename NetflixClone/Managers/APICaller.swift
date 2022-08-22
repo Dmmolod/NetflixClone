@@ -14,6 +14,7 @@ class APICaller {
         case failedToGetURL
         case failedToParseData
         case failedToGetQuery
+        case failedToGetImagesResponse
     }
     
     private struct Constants {
@@ -86,19 +87,33 @@ class APICaller {
               let url = URL(string: "\(Constants.youTubeBaseURL)q=\(query)&key=\(Constants.youTubeAPIKey)") else { return }
         
         
-        print(url)
         URLSession.shared.dataTask(with: url) { data, _, error in
             guard let data = data, error == nil else {
                 completion(.failure(APIError.failedToGetData))
                 return
             }
             guard let result = try? JSONDecoder().decode(YoutubeSearchResponse.self, from: data) else {
-                completion(.failure(APIError.failedToParseData))
+                DispatchQueue.main.async { completion(.failure(APIError.failedToParseData)) }
                 return
             }
             let filteredResult = result.items.filter { $0.id.videoId != nil }
 
             DispatchQueue.main.async { completion(.success(filteredResult[0])) }
+        }.resume()
+    }
+    
+    func getImages(for id: String,
+                   _ completion: @escaping (Result<ContentImagesResponse, Error>) -> Void) {
+
+        guard let url = URL(string: "\(Constants.baseURL)/3/movie/\(id)/images?api_key=\(Constants.apiKey)") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, error == nil,
+                  let filmImagesResponse = try? JSONDecoder().decode(ContentImagesResponse.self, from: data) else {
+                completion(.failure(APIError.failedToGetImagesResponse))
+                return
+            }
+            DispatchQueue.main.async { completion(.success(filmImagesResponse)) }
         }.resume()
     }
 }

@@ -44,7 +44,7 @@ class UpcomingViewController: UIViewController {
             case .success(let contents):
                 self?.contents = contents
                 self?.upcomingTable.reloadData()
-            case .failure(let error): print(error.localizedDescription)
+            case .failure(let error): print(error)
             }
         }
     }
@@ -75,19 +75,34 @@ extension UpcomingViewController: UITableViewDelegate, UITableViewDataSource {
         
         let content = contents[indexPath.row]
         guard let contentName = content.title != nil ? content.title : content.name else { return }
-        
+        let vc = ContentPreviewViewController()
+
         apiCaller?.getMovie(with: contentName) { [weak self] result in
             switch result {
             case .success(let videoElement):
-                let vc = ContentPreviewViewController()
                 vc.configure(with: ContentPreviewViewModel(title: contentName,
                                                            youtubeView: videoElement,
-                                                           contentOverview: content.overview),
+                                                           posterPath: nil,
+                                                           contentOverview: content.overview,
+                                                           images: nil),
                              navBarYOffset: nil)
-                
                 self?.navigationController?.pushViewController(vc, animated: true)
+            case .failure(let error):
                 
-            case .failure(let error): print(error.localizedDescription)
+                self?.apiCaller?.getImages(for: String(content.id), { result in
+                    switch result {
+                    case .success(let contentImageResponse):
+                        vc.configure(with: ContentPreviewViewModel(title: contentName,
+                                                                   youtubeView: nil,
+                                                                   posterPath: content.posterPath,
+                                                                   contentOverview: content.overview,
+                                                                   images: contentImageResponse.backdrops),
+                                     navBarYOffset: nil)
+                        self?.navigationController?.pushViewController(vc, animated: true)
+                    case .failure(let error): print(error)
+                    }
+                })
+                print(error)
             }
         }
     }

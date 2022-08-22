@@ -73,7 +73,7 @@ class HomeViewController: UIViewController {
                 let contentViewModel = ContentViewModel(titleName: currentContent?.title == nil ? currentContent?.name : currentContent?.title,
                                                         posterPath: currentContent?.posterPath)
                 self?.headerView?.configure(with: contentViewModel)
-            case .failure(let error): print(error.localizedDescription)
+            case .failure(let error): print(error)
             }
         }
     }
@@ -121,7 +121,7 @@ extension HomeViewController: UITableViewDelegate, UITableViewDataSource {
         apiCaller?.get(for: sectionType) { result in
             switch result {
             case .success(let contents): cell.configure(with: contents)
-            case .failure(let error): print(error.localizedDescription)
+            case .failure(let error): print(error)
             }
         }
         

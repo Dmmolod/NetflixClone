@@ -12,14 +12,31 @@ class ContentPreviewViewController: UIViewController {
     
     private var navBarYOffset: CGFloat?
     
+    private var images: [UIImage?] = []
+    
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         return scrollView
     }()
     
+    private var postersScrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.alwaysBounceHorizontal = true
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.isPagingEnabled = true
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        return scrollView
+    }()
+    
+    private var posterPaths: [ContentImage]? {
+        didSet {
+            updatePoster()
+        }
+    }
+    
     private let webView: WKWebView = {
-       let webView = WKWebView()
+        let webView = WKWebView()
         webView.translatesAutoresizingMaskIntoConstraints = false
         return webView
     }()
@@ -39,7 +56,7 @@ class ContentPreviewViewController: UIViewController {
         return label
     }()
     private let downloadButton: UIButton = {
-       let button = UIButton()
+        let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setTitle("Download", for: .normal)
         button.setTitleColor(.label, for: .normal)
@@ -48,13 +65,14 @@ class ContentPreviewViewController: UIViewController {
         button.layer.borderWidth = 1
         return button
     }()
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         navigationController?.navigationBar.prefersLargeTitles = false
         
         view.addSubview(scrollView)
+        scrollView.addSubview(postersScrollView)
         scrollView.addSubview(webView)
         scrollView.addSubview(contentLable)
         scrollView.addSubview(overviewLabel)
@@ -107,21 +125,73 @@ class ContentPreviewViewController: UIViewController {
             downloadButton.widthAnchor.constraint(equalToConstant: 120),
             downloadButton.heightAnchor.constraint(equalToConstant: 40)
         ]
+        let postersScrollViewConstraints = [
+            postersScrollView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            postersScrollView.heightAnchor.constraint(equalToConstant: 300),
+            postersScrollView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            postersScrollView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor)
+        ]
         
         NSLayoutConstraint.activate(scrollViewConstraints)
         NSLayoutConstraint.activate(webViewConstraints)
         NSLayoutConstraint.activate(contentLableConstraints)
         NSLayoutConstraint.activate(overviewLabelConstraints)
         NSLayoutConstraint.activate(downloadButtonConstraints)
+        NSLayoutConstraint.activate(postersScrollViewConstraints)
     }
     
     func configure(with model: ContentPreviewViewModel, navBarYOffset: CGFloat?) {
         contentLable.text = model.title
         overviewLabel.text = model.contentOverview
         self.navBarYOffset = navBarYOffset
-                
-        guard let url = URL(string: "https://www.youtube.com/embed/\(model.youtubeView.id.videoId)") else { return }
         
-        webView.load(URLRequest(url: url))
+        if let videoId = model.youtubeView?.id.videoId {
+            webView.isHidden = false
+            guard let url = URL(string: "https://www.youtube.com/embed/\(videoId)") else { return }
+        
+            webView.load(URLRequest(url: url))
+        } else {
+            webView.isHidden = true
+            self.posterPaths = model.images
+        }
+    }
+    
+    private func updatePoster() {
+        guard let posterPaths = posterPaths else { return }
+        
+        let imagesGroup = DispatchGroup()
+        
+        for imageIndex in 0..<(posterPaths.count > 10 ? 10 : posterPaths.count) {
+            imagesGroup.enter()
+            
+            ImageManager(posterPaths[imageIndex].filePath).fetch(completion: { [weak self] image in
+                self?.images.append(image)
+                imagesGroup.leave()
+            })
+        }
+        
+        imagesGroup.notify(queue: .main) { [weak self] in
+            self?.configPosterScrollView()
+        }
+    }
+    
+    private func configPosterScrollView() {
+        if images.isEmpty { return }
+
+        let imagesForScroll = images.map { UIImageView(image: $0) }
+        let stackView = UIStackView(arrangedSubviews: imagesForScroll)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.alignment = .center
+        stackView.axis = .horizontal
+        stackView.distribution = .fillEqually
+        
+        postersScrollView.addSubview(stackView)
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: postersScrollView.topAnchor),
+            stackView.bottomAnchor.constraint(equalTo: postersScrollView.bottomAnchor),
+            stackView.leadingAnchor.constraint(equalTo: postersScrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: postersScrollView.trailingAnchor),
+            stackView.widthAnchor.constraint(equalToConstant: view.bounds.width * CGFloat(images.count))
+        ])
     }
 }

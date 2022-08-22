@@ -79,19 +79,32 @@ extension DownloadsViewController: UITableViewDelegate, UITableViewDataSource {
         
         let content = contents[indexPath.row]
         guard let contentName = content.title != nil ? content.title : content.name else { return }
+        let vc = ContentPreviewViewController()
         
         apiCaller?.getMovie(with: contentName) { [weak self] result in
             switch result {
             case .success(let videoElement):
-                let vc = ContentPreviewViewController()
+                
                 vc.configure(with: ContentPreviewViewModel(title: contentName,
                                                            youtubeView: videoElement,
-                                                           contentOverview: content.overview),
+                                                           posterPath: nil,
+                                                           contentOverview: content.overview,
+                                                           images: nil),
                              navBarYOffset: nil)
-                
                 self?.navigationController?.pushViewController(vc, animated: true)
                 
-            case .failure(let error): print(error.localizedDescription)
+            case .failure(let error):
+                self?.apiCaller?.getImages(for: String(content.id), { result in
+                    guard let contentImageResponse = try? result.get() else { return }
+                    vc.configure(with: ContentPreviewViewModel(title: contentName,
+                                                               youtubeView: nil,
+                                                               posterPath: content.posterPath,
+                                                               contentOverview: content.overview,
+                                                               images: contentImageResponse.backdrops),
+                                 navBarYOffset: nil)
+                    self?.navigationController?.pushViewController(vc, animated: true)
+                })
+                print(error)
             }
         }
     }
@@ -104,7 +117,6 @@ extension DownloadsViewController: UITableViewDelegate, UITableViewDataSource {
                 case .success():
                     self?.contents.remove(at: indexPath.row)
                     tableView.deleteRows(at: [indexPath], with: .fade)
-                    print("Delete from the database")
                 case .failure(let error): print(error)
                 }
             }

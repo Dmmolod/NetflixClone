@@ -23,10 +23,7 @@ struct ImageManager {
               let cacheDirectory = cacheDirectory else { return }
         
         if let dataFromCache = FileManager.default.contents(atPath: cacheDirectory.appendingPathComponent(path).path),
-           let imageFromData = UIImage(data: dataFromCache) {
-            completion(imageFromData)
-            debugPrint("Image From CACHE")
-        }
+           let imageFromData = UIImage(data: dataFromCache) { completion(imageFromData) }
         else {
             
             URLSession.shared.dataTask(with: url) { data, _, error in
@@ -38,7 +35,6 @@ struct ImageManager {
                                                contents: downloadingImageData, attributes: nil)
                 
                 completion(downloadingImage)
-                debugPrint("Image From INTERNET")
             }.resume()
         }
     }

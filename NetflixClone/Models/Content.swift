@@ -43,6 +43,18 @@ struct Content: Decodable {
     }
 }
 
+struct ContentImagesResponse: Decodable {
+    let backdrops: [ContentImage]
+}
+
+struct ContentImage: Decodable {
+    let filePath: String
+    
+    enum CodingKeys: String, CodingKey {
+        case filePath = "file_path"
+    }
+}
+
 struct TrendingMovieResponse: Decodable {
     
 }

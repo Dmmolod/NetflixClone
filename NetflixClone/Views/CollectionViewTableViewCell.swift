@@ -53,7 +53,7 @@ class CollectionViewTableViewCell: UITableViewCell {
     private func downloadContent(at indexPath: IndexPath) {
         DataPersistenseManager.shared.downloadContent(with: contents[indexPath.item]) { result in
             switch result {
-            case .success(): print("Downloaded to Database")
+            case .success(): return
             case .failure(let error): print(error)
             }
         }
@@ -86,10 +86,22 @@ extension CollectionViewTableViewCell: UICollectionViewDelegate, UICollectionVie
             case .success(let videoElement):
                 let viewModel = ContentPreviewViewModel(title: contentName,
                                                         youtubeView: videoElement,
-                                                        contentOverview: content.overview)
+                                                        posterPath: nil,
+                                                        contentOverview: content.overview,
+                                                        images: nil)
                 
                 self?.delegate?.collectionViewTableViewCellDidTapCell(viewModel: viewModel)
-            case .failure(let error): print(error)
+                
+            case .failure(let error):
+                self?.apiCaller?.getImages(for: String(content.id), { result in
+                    guard let contentImageResponse = try? result.get() else { return }
+                    self?.delegate?.collectionViewTableViewCellDidTapCell(viewModel: ContentPreviewViewModel(title: contentName,
+                                                                                                             youtubeView: nil,
+                                                                                                             posterPath: content.posterPath,
+                                                                                                             contentOverview: content.overview,
+                                                                                                             images: contentImageResponse.backdrops))
+                })
+                print(error)
             }
         }
     }

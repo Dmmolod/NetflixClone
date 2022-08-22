@@ -61,20 +61,26 @@ extension SearchResultsViewController: UICollectionViewDelegate, UICollectionVie
         
         let content = contents[indexPath.item]
         let contentName = (content.title == nil ? content.name : content.title) ?? ""
-        print(contentName)
+
         apiCaller?.getMovie(with: contentName) { [weak self] result in
             switch result {
             case .success(let videoElement):
                 self?.delegate?.searchResultsViewControllerDidTapItem(ContentPreviewViewModel(title: contentName,
-                                                                                        youtubeView: videoElement,
-                                                                                        contentOverview: content.overview))
-            case .failure(let error): print(error.localizedDescription)
+                                                                                              youtubeView: videoElement,
+                                                                                              posterPath: nil,
+                                                                                              contentOverview: content.overview,
+                                                                                              images: nil))
+            case .failure(let error):
+                self?.apiCaller?.getImages(for: String(content.id), { result in
+                    guard let contentImageResponse = try? result.get() else { return }
+                    self?.delegate?.searchResultsViewControllerDidTapItem(ContentPreviewViewModel(title: contentName,
+                                                                                                  youtubeView: nil,
+                                                                                                  posterPath: content.posterPath,
+                                                                                                  contentOverview: content.overview,
+                                                                                                  images: contentImageResponse.backdrops))
+                })
+                print(error)
             }
         }
-        
-        
-        
-        
     }
-    
 }
