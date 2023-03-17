@@ -19,7 +19,6 @@ class MainTabBarViewController: UITabBarController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .red
         
         let vc1 = HomeViewController()
         vc1.apiCaller = apiCaller
